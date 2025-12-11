@@ -1,0 +1,99 @@
+// Schema do banco de dados PostgreSQL - Fala Doutor
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tabela de médicos
+model Medico {
+  id             Int       @id @default(autoincrement())
+  nome           String    @db.VarChar(100)
+  cpf            String    @unique @db.VarChar(14)
+  crm            String    @unique @db.VarChar(20)
+  especialidade  String    @db.VarChar(50)
+  email          String    @unique @db.VarChar(100)
+  senhaHash      String    @map("senha_hash")
+  dataNascimento DateTime  @map("data_nascimento") @db.Date
+  fotoUrl        String?   @map("foto_url")
+  bio            String?   @db.Text
+  ativo          Boolean   @default(true)
+  isAdmin        Boolean   @default(false) @map("is_admin")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  consultas  Consulta[]
+  horarios   HorarioDisponivel[]
+
+  @@map("medicos")
+}
+
+// Tabela de pacientes
+model Paciente {
+  id             Int       @id @default(autoincrement())
+  nome           String    @db.VarChar(100)
+  cpf            String    @unique @db.VarChar(14)
+  email          String    @unique @db.VarChar(100)
+  senhaHash      String    @map("senha_hash")
+  telefone       String?   @db.VarChar(20)
+  dataNascimento DateTime  @map("data_nascimento") @db.Date
+  endereco       String?   @db.VarChar(200)
+  planoSaude     String?   @map("plano_saude") @db.VarChar(50)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  consultas Consulta[]
+
+  @@map("pacientes")
+}
+
+// Tabela de consultas
+model Consulta {
+  id          Int            @id @default(autoincrement())
+  medicoId    Int            @map("medico_id")
+  pacienteId  Int            @map("paciente_id")
+  dataHora    DateTime       @map("data_hora")
+  status      StatusConsulta @default(AGENDADA)
+  observacoes String?        @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  medico   Medico   @relation(fields: [medicoId], references: [id])
+  paciente Paciente @relation(fields: [pacienteId], references: [id])
+
+  @@map("consultas")
+}
+
+// Tabela de horários disponíveis dos médicos
+model HorarioDisponivel {
+  id         Int      @id @default(autoincrement())
+  medicoId   Int      @map("medico_id")
+  diaSemana  Int      @map("dia_semana") // 0 = Domingo, 6 = Sábado
+  horaInicio String   @map("hora_inicio") @db.VarChar(5) // Formato: "08:00"
+  horaFim    String   @map("hora_fim") @db.VarChar(5)    // Formato: "18:00"
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  medico Medico @relation(fields: [medicoId], references: [id])
+
+  @@map("horarios_disponiveis")
+}
+
+// Enum para status da consulta
+enum StatusConsulta {
+  AGENDADA
+  CONFIRMADA
+  CANCELADA
+  REALIZADA
+
+  @@map("status_consulta")
+}
