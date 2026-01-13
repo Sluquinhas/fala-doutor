@@ -58,6 +58,8 @@ export const listarConsultas = async (req, res) => {
 export const listarConsultasPaciente = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('🔍 Buscando consultas do paciente:', id);
+    console.log('🔍 Usuário autenticado:', req.usuario);
 
     const consultas = await Consulta.findAll({
       where: { paciente_id: id },
@@ -349,8 +351,8 @@ export const cancelarConsulta = async (req, res) => {
 
     // Registrar auditoria
     await AuditLog.create({
-      usuario_id: req.user?.id,
-      usuario_nome: req.user?.nome,
+      usuario_id: req.usuario?.id,
+      usuario_nome: req.usuario?.nome || 'Usuário',
       acao: 'UPDATE',
       entidade: 'Consulta',
       dados_anteriores: dadosAnteriores,

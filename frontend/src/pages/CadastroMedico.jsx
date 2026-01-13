@@ -33,7 +33,7 @@ const CadastroMedico = () => {
         cpf: cpfLimpo,
         crm: `CRM/${data.uf} ${crmLimpo}`,
         data_nascimento: data.data_nascimento,
-        plano: data.plano || 'básico',
+        plano: data.plano || 'nenhum',
         senha: data.senha,
         role: 'medico'
       };
@@ -179,9 +179,13 @@ const CadastroMedico = () => {
                   placeholder="123456"
                   {...register('crm', {
                     required: 'CRM é obrigatório',
-                    pattern: {
-                      value: /^\d{4,6}$/,
-                      message: 'CRM deve ter entre 4 e 6 dígitos'
+                    minLength: {
+                      value: 4,
+                      message: 'CRM deve ter no mínimo 4 dígitos'
+                    },
+                    maxLength: {
+                      value: 6,
+                      message: 'CRM deve ter no máximo 6 dígitos'
                     },
                     onChange: (e) => {
                       e.target.value = formatarCRM(e.target.value);
@@ -268,10 +272,14 @@ const CadastroMedico = () => {
                 className="input-field"
                 {...register('plano')}
               >
-                <option value="básico">Básico</option>
-                <option value="prata">Prata</option>
-                <option value="ouro">Ouro</option>
-                <option value="platinum">Platinum</option>
+                <option value="nenhum">Nenhum</option>
+                <option value="unimed">Unimed</option>
+                <option value="amil">Amil</option>
+                <option value="bradesco">Bradesco Saúde</option>
+                <option value="sulamerica">SulAmérica Saúde</option>
+                <option value="hapvida">Hapvida</option>
+                <option value="notredame">NotreDame Intermédica</option>
+                <option value="prevent">Prevent Senior</option>
               </select>
             </div>
 

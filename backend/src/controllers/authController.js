@@ -216,7 +216,7 @@ export const registro = async (req, res) => {
       cpf,
       crm,
       data_nascimento,
-      plano: plano || 'básico',
+      plano: plano || 'nenhum',
       senha: senhaHash,
       role: role || 'medico',
       ativo: true
@@ -263,19 +263,22 @@ export const registro = async (req, res) => {
     });
   } catch (error) {
     console.error('Erro no registro:', error);
+    console.error('Erro detalhes:', JSON.stringify(error, null, 2));
 
     // Tratar erros de validação do Sequelize
-    if (error.name === 'SequelizeValidationError') {
+    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeDatabaseError') {
       return res.status(400).json({
         error: true,
         message: 'Erro de validação',
-        erros: error.errors.map(e => ({ campo: e.path, mensagem: e.message }))
+        detalhes: error.message,
+        erros: error.errors ? error.errors.map(e => ({ campo: e.path, mensagem: e.message })) : []
       });
     }
 
     return res.status(500).json({
       error: true,
-      message: 'Erro ao cadastrar médico'
+      message: 'Erro ao cadastrar médico',
+      detalhes: error.message
     });
   }
 };

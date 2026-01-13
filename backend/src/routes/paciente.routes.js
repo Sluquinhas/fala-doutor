@@ -110,7 +110,7 @@ router.post(
       .withMessage('Data de nascimento deve ser anterior à data atual'),
     body('plano')
       .optional()
-      .isIn(['básico', 'prata', 'ouro', 'platinum'])
+      .isIn(['nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'])
       .withMessage('Plano inválido'),
     body('analise')
       .optional()
@@ -162,7 +162,7 @@ router.put(
       .withMessage('Data de nascimento deve ser anterior à data atual'),
     body('plano')
       .optional()
-      .isIn(['básico', 'prata', 'ouro', 'platinum'])
+      .isIn(['nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'])
       .withMessage('Plano inválido'),
     body('analise')
       .optional()

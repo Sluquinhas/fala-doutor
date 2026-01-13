@@ -14,9 +14,9 @@ const auditLogSchema = new mongoose.Schema({
   },
   usuario_id: {
     type: String,
-    required: true,
+    required: false,
     index: true,
-    description: 'ID do usuário (médico) que realizou a ação'
+    description: 'ID do usuário que realizou a ação'
   },
   usuario_nome: {
     type: String,
@@ -40,7 +40,7 @@ const auditLogSchema = new mongoose.Schema({
   entidade: {
     type: String,
     required: true,
-    enum: ['Medico', 'Paciente', 'Auth'],
+    enum: ['Medico', 'Paciente', 'Auth', 'Consulta'],
     description: 'Tipo de entidade afetada'
   },
   entidade_id: {

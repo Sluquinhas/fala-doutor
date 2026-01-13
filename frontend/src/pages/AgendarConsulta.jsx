@@ -32,7 +32,7 @@ const AgendarConsulta = () => {
         }
       });
 
-      setMedicos(response.data.medicos || []);
+      setMedicos(response.data.data || response.data.medicos || []);
     } catch (error) {
       console.error('Erro ao carregar médicos:', error);
       setErro('Erro ao carregar lista de médicos');

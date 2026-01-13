@@ -9,6 +9,7 @@ const PacienteDashboard = () => {
   const [consultas, setConsultas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
+  const [cancelando, setCancelando] = useState(null);
 
   useEffect(() => {
     carregarConsultas();
@@ -41,6 +42,36 @@ const PacienteDashboard = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const cancelarConsulta = async (consultaId) => {
+    if (!window.confirm('Tem certeza que deseja cancelar esta consulta?')) {
+      return;
+    }
+
+    try {
+      setCancelando(consultaId);
+      setErro('');
+
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `http://localhost:3000/api/consultas/${consultaId}/cancelar`,
+        { motivo_cancelamento: 'Cancelado pelo paciente' },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      // Recarregar consultas após cancelamento
+      await carregarConsultas();
+    } catch (error) {
+      console.error('Erro ao cancelar consulta:', error);
+      setErro(error.response?.data?.message || 'Erro ao cancelar consulta');
+    } finally {
+      setCancelando(null);
+    }
   };
 
   const formatarData = (data) => {
@@ -160,10 +191,10 @@ const PacienteDashboard = () => {
               </div>
               <div className="ml-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {consultas.length}
+                  {consultas.filter(c => c.status !== 'cancelada').length}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Total de consultas
+                  Consultas ativas
                 </p>
               </div>
             </div>
@@ -217,9 +248,20 @@ const PacienteDashboard = () => {
                         </p>
                       )}
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(consulta.status)}`}>
-                      {consulta.status}
-                    </span>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(consulta.status)}`}>
+                        {consulta.status}
+                      </span>
+                      {consulta.status !== 'cancelada' && (
+                        <button
+                          onClick={() => cancelarConsulta(consulta.id)}
+                          disabled={cancelando === consulta.id}
+                          className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+                        >
+                          {cancelando === consulta.id ? 'Cancelando...' : 'Cancelar'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

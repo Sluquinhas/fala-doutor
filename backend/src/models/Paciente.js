@@ -66,9 +66,9 @@ const Paciente = sequelize.define('paciente', {
     comment: 'Data de nascimento do paciente'
   },
   plano: {
-    type: DataTypes.ENUM('básico', 'prata', 'ouro', 'platinum'),
+    type: DataTypes.ENUM('nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'),
     allowNull: false,
-    defaultValue: 'básico',
+    defaultValue: 'nenhum',
     comment: 'Plano de saúde do paciente'
   },
   analise: {

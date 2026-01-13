@@ -74,9 +74,9 @@ const Medico = sequelize.define('medico', {
     comment: 'Data de nascimento do médico'
   },
   plano: {
-    type: DataTypes.ENUM('básico', 'premium', 'enterprise'),
+    type: DataTypes.ENUM('nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'),
     allowNull: false,
-    defaultValue: 'básico',
+    defaultValue: 'nenhum',
     comment: 'Plano de assinatura do médico'
   },
   senha: {

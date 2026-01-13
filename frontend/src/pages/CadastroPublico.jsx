@@ -214,6 +214,33 @@ const CadastroPublico = () => {
               />
             </div>
 
+            {/* Plano de Saúde */}
+            <div>
+              <label htmlFor="plano" className="label">
+                Plano de Saúde *
+              </label>
+              <select
+                id="plano"
+                className={`input-field ${errors.plano ? 'input-error' : ''}`}
+                {...register('plano', {
+                  required: 'Plano de saúde é obrigatório'
+                })}
+              >
+                <option value="">Selecione um plano</option>
+                <option value="nenhum">Nenhum</option>
+                <option value="unimed">Unimed</option>
+                <option value="amil">Amil</option>
+                <option value="bradesco">Bradesco Saúde</option>
+                <option value="sulamerica">SulAmérica Saúde</option>
+                <option value="hapvida">Hapvida</option>
+                <option value="notredame">NotreDame Intermédica</option>
+                <option value="prevent">Prevent Senior</option>
+              </select>
+              {errors.plano && (
+                <p className="error-message">{errors.plano.message}</p>
+              )}
+            </div>
+
             {/* Senha */}
             <div>
               <label htmlFor="senha" className="label">

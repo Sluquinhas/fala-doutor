@@ -73,7 +73,6 @@ const startServer = async () => {
     }
 
     // Sincronizar modelos com o banco (criar tabelas se não existirem)
-    // No primeiro uso, você pode usar syncDatabase(true) para recriar as tabelas
     await syncDatabase(false, false);
 
     // Conectar ao MongoDB

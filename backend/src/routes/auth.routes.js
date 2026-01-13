@@ -61,7 +61,7 @@ router.post(
       .withMessage('Data de nascimento deve ser anterior à data atual'),
     body('plano')
       .optional()
-      .isIn(['básico', 'premium', 'enterprise'])
+      .isIn(['nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'])
       .withMessage('Plano inválido'),
     body('senha')
       .notEmpty()

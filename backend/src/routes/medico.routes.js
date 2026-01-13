@@ -19,9 +19,9 @@ router.use(autenticar);
 /**
  * @route   GET /api/medicos
  * @desc    Listar todos os médicos
- * @access  Private (Médicos e Admins)
+ * @access  Private (Todos os usuários autenticados - necessário para pacientes agendarem consultas)
  */
-router.get('/', apenasMedicos, listarMedicos);
+router.get('/', listarMedicos);
 
 /**
  * @route   GET /api/medicos/:id
@@ -73,7 +73,7 @@ router.post(
       .withMessage('Data de nascimento deve ser anterior à data atual'),
     body('plano')
       .optional()
-      .isIn(['básico', 'premium', 'enterprise'])
+      .isIn(['nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'])
       .withMessage('Plano inválido'),
     body('senha')
       .notEmpty()
@@ -122,7 +122,7 @@ router.put(
       .withMessage('Data de nascimento deve ser anterior à data atual'),
     body('plano')
       .optional()
-      .isIn(['básico', 'premium', 'enterprise'])
+      .isIn(['nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'])
       .withMessage('Plano inválido'),
     body('senha')
       .optional()
