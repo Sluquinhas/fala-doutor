@@ -265,13 +265,14 @@ const CadastroMedico = () => {
             {/* Plano */}
             <div>
               <label htmlFor="plano" className="label">
-                Plano
+                Plano de Saúde
               </label>
               <select
                 id="plano"
                 className="input-field"
                 {...register('plano')}
               >
+                <option value="">Selecione um plano</option>
                 <option value="nenhum">Nenhum</option>
                 <option value="unimed">Unimed</option>
                 <option value="amil">Amil</option>

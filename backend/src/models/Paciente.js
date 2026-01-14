@@ -96,9 +96,12 @@ const Paciente = sequelize.define('paciente', {
     type: DataTypes.STRING(15),
     allowNull: true,
     validate: {
-      is: {
-        args: /^[0-9]{10,15}$/,
-        msg: 'Telefone deve conter entre 10 e 15 dígitos numéricos'
+      isValidPhone(value) {
+        if (value && value.length > 0) {
+          if (!/^[0-9]{10,15}$/.test(value)) {
+            throw new Error('Telefone deve conter entre 10 e 15 dígitos numéricos');
+          }
+        }
       }
     },
     comment: 'Telefone do paciente (apenas números)'
