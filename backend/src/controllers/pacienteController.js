@@ -31,7 +31,7 @@ export const cadastroPublico = async (req, res) => {
       senhaHash = await hashSenha(senha);
     }
 
-    // Criar paciente com plano básico e status ativo
+    // Criar paciente com status ativo
     const novoPaciente = await Paciente.create({
       nome,
       cpf,
@@ -39,7 +39,7 @@ export const cadastroPublico = async (req, res) => {
       email,
       telefone,
       senha: senhaHash,
-      plano: 'básico',
+      plano: req.body.plano || 'nenhum',
       status: 'ativo'
     });
 
@@ -208,7 +208,7 @@ export const criarPaciente = async (req, res) => {
       nome,
       cpf,
       data_nascimento,
-      plano: plano || 'básico',
+      plano: plano || 'nenhum',
       analise,
       status: status || 'ativo',
       email,
