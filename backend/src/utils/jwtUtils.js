@@ -26,6 +26,7 @@ export const gerarToken = (payload) => {
       id: payload.id,
       nome: payload.nome,
       role: payload.role || 'medico',
+      tipo: payload.tipo || 'medico',
       iat: Math.floor(Date.now() / 1000)
     };
 

@@ -1,94 +1,81 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
-import Medico from './Medico.js';
-import Paciente from './Paciente.js';
+import mongoose from 'mongoose';
+import { randomUUID } from 'crypto';
 
-/**
- * Modelo de Consulta
- * Representa agendamentos entre médicos e pacientes
- */
-const Consulta = sequelize.define('consultas', {
-  id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    primaryKey: true
+const consultaSchema = new mongoose.Schema({
+  _id: {
+    type: String,
+    default: () => randomUUID()
   },
   medico_id: {
-    type: DataTypes.UUID,
-    allowNull: false,
-    references: {
-      model: 'medicos',
-      key: 'id'
-    },
-    onDelete: 'CASCADE'
+    type: String,
+    required: true,
+    ref: 'Medico'
   },
   paciente_id: {
-    type: DataTypes.UUID,
-    allowNull: false,
-    references: {
-      model: 'pacientes',
-      key: 'id'
-    },
-    onDelete: 'CASCADE'
+    type: String,
+    required: true,
+    ref: 'Paciente'
   },
   data_consulta: {
-    type: DataTypes.DATEONLY,
-    allowNull: false,
+    type: String,
+    required: true,
     validate: {
-      isDate: true,
-      isAfterToday(value) {
-        if (new Date(value) < new Date().setHours(0, 0, 0, 0)) {
-          throw new Error('Data da consulta não pode ser no passado');
-        }
-      }
+      validator(v) {
+        return /^\d{4}-\d{2}-\d{2}$/.test(v);
+      },
+      message: 'Formato de data inválido. Use YYYY-MM-DD'
     }
   },
   hora_consulta: {
-    type: DataTypes.STRING(5), // Formato: HH:MM
-    allowNull: false,
-    validate: {
-      is: /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
-    }
+    type: String,
+    required: true,
+    match: [/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'Hora inválida. Use formato HH:MM']
   },
   status: {
-    type: DataTypes.ENUM('agendada', 'confirmada', 'realizada', 'cancelada'),
-    defaultValue: 'agendada',
-    allowNull: false
+    type: String,
+    enum: { values: ['agendada', 'confirmada', 'realizada', 'cancelada'], message: 'Status inválido' },
+    default: 'agendada'
   },
   observacoes: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    type: String,
+    default: null
   },
   motivo_cancelamento: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    type: String,
+    default: null
   }
 }, {
-  indexes: [
-    {
-      fields: ['medico_id']
-    },
-    {
-      fields: ['paciente_id']
-    },
-    {
-      fields: ['data_consulta']
-    },
-    {
-      fields: ['status']
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  toJSON: {
+    virtuals: true,
+    transform(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
     }
-  ]
+  }
 });
 
-// Associações
-Consulta.belongsTo(Medico, {
-  foreignKey: 'medico_id',
-  as: 'medico'
+// Virtuals para populate com alias (consulta.medico e consulta.paciente)
+consultaSchema.virtual('medico', {
+  ref: 'Medico',
+  localField: 'medico_id',
+  foreignField: '_id',
+  justOne: true
 });
 
-Consulta.belongsTo(Paciente, {
-  foreignKey: 'paciente_id',
-  as: 'paciente'
+consultaSchema.virtual('paciente', {
+  ref: 'Paciente',
+  localField: 'paciente_id',
+  foreignField: '_id',
+  justOne: true
 });
 
+consultaSchema.index({ medico_id: 1 });
+consultaSchema.index({ paciente_id: 1 });
+consultaSchema.index({ data_consulta: 1 });
+consultaSchema.index({ status: 1 });
+consultaSchema.index({ medico_id: 1, data_consulta: 1, hora_consulta: 1 });
+
+const Consulta = mongoose.model('Consulta', consultaSchema);
 export default Consulta;

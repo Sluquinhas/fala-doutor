@@ -1,0 +1,180 @@
+/* ===== ESTILO DAS ABAS ===== */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tab {
+  padding: 1rem 2rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #6b7280;
+  transition: all 0.3s ease;
+}
+
+.tab:hover {
+  color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.tab.ativa {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* ===== CONTEÚDO DAS ABAS ===== */
+.tab-content {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tabela-wrapper {
+  width: 100%;
+}
+
+/* ===== TABELAS ===== */
+.tabela-relatorio {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.tabela-relatorio thead {
+  background-color: #f9fafb;
+}
+
+.tabela-relatorio th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.tabela-relatorio td {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.tabela-relatorio tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.tabela-relatorio tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* ===== BADGES (ETIQUETAS DE STATUS) ===== */
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: inline-block;
+  text-align: center;
+}
+
+/* Status dos Pacientes */
+.badge.ativo {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge.inativo {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge.em_tratamento {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge.alta {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Roles dos Médicos */
+.badge.admin {
+  background-color: #e9d5ff;
+  color: #6b21a8;
+}
+
+.badge.medico {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Tipo Paciente */
+.badge.paciente {
+  background-color:  #dbeafe;
+  color: #1e40af;
+}
+/* ===== ESTADO DE CARREGAMENTO ===== */
+.carregando {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.carregando p {
+  font-size: 1.125rem;
+  color: #6b7280;
+  margin-top: 1rem;
+}
+
+/* ===== MENSAGEM SEM DADOS ===== */
+.sem-dados {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 1rem;
+}
+
+/* ===== RESPONSIVIDADE (MOBILE) ===== */
+@media (max-width: 768px) {
+  .tab {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .tab-content {
+    padding: 1rem;
+  }
+
+  .tabela-relatorio {
+    font-size: 0.875rem;
+  }
+
+  .tabela-relatorio th,
+  .tabela-relatorio td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Rolagem horizontal em telas pequenas */
+.overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+

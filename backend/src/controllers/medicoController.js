@@ -1,5 +1,4 @@
-import { Op } from 'sequelize';
-import { Medico } from '../models/index.js';
+import Medico from '../models/Medico.js';
 import { hashSenha, validarSenha } from '../utils/hashUtils.js';
 import AuditLog from '../models/AuditLog.js';
 
@@ -17,34 +16,34 @@ export const listarMedicos = async (req, res) => {
     const { page = 1, limit = 10, ativo, plano, search } = req.query;
 
     // Construir filtros
-    const where = {};
+    const filter = {};
 
     if (ativo !== undefined) {
-      where.ativo = ativo === 'true';
+      filter.ativo = ativo === 'true';
     }
 
     if (plano) {
-      where.plano = plano;
+      filter.plano = plano;
     }
 
     if (search) {
-      where[Op.or] = [
-        { nome: { [Op.iLike]: `%${search}%` } },
-        { cpf: { [Op.like]: `%${search}%` } },
-        { crm: { [Op.like]: `%${search}%` } }
+      filter.$or = [
+        { nome: { $regex: search, $options: 'i' } },
+        { cpf: { $regex: search, $options: 'i' } },
+        { crm: { $regex: search, $options: 'i' } }
       ];
     }
 
     // Paginação
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-    const { count, rows: medicos } = await Medico.findAndCountAll({
-      where,
-      attributes: { exclude: ['senha'] },
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['created_at', 'DESC']]
-    });
+    const [count, medicos] = await Promise.all([
+      Medico.countDocuments(filter),
+      Medico.find(filter)
+        .sort({ created_at: -1 })
+        .limit(parseInt(limit))
+        .skip(parseInt(skip))
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -73,9 +72,7 @@ export const buscarMedicoPorId = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const medico = await Medico.findByPk(id, {
-      attributes: { exclude: ['senha'] }
-    });
+    const medico = await Medico.findById(id);
 
     if (!medico) {
       return res.status(404).json({
@@ -115,7 +112,7 @@ export const criarMedico = async (req, res) => {
     }
 
     // Verificar se CPF já existe
-    const cpfExiste = await Medico.findOne({ where: { cpf } });
+    const cpfExiste = await Medico.findOne({ cpf });
     if (cpfExiste) {
       return res.status(400).json({
         error: true,
@@ -124,7 +121,7 @@ export const criarMedico = async (req, res) => {
     }
 
     // Verificar se CRM já existe
-    const crmExiste = await Medico.findOne({ where: { crm } });
+    const crmExiste = await Medico.findOne({ crm });
     if (crmExiste) {
       return res.status(400).json({
         error: true,
@@ -141,7 +138,7 @@ export const criarMedico = async (req, res) => {
       cpf,
       crm,
       data_nascimento,
-      plano: plano || 'básico',
+      plano: plano || 'nenhum',
       senha: senhaHash,
       role: role || 'medico',
       ativo: true
@@ -153,7 +150,7 @@ export const criarMedico = async (req, res) => {
       usuario_nome: req.usuario.nome,
       acao: 'CREATE',
       entidade: 'Medico',
-      entidade_id: novoMedico.id,
+      entidade_id: novoMedico._id,
       dados_novos: {
         nome: novoMedico.nome,
         cpf: novoMedico.cpf,
@@ -166,23 +163,27 @@ export const criarMedico = async (req, res) => {
       status: 'sucesso'
     });
 
-    // Retornar médico criado (sem senha)
-    const medicoResposta = novoMedico.toJSON();
-    delete medicoResposta.senha;
-
     return res.status(201).json({
       success: true,
       message: 'Médico criado com sucesso',
-      data: medicoResposta
+      data: novoMedico
     });
   } catch (error) {
     console.error('Erro ao criar médico:', error);
 
-    if (error.name === 'SequelizeValidationError') {
+    if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: true,
         message: 'Erro de validação',
-        erros: error.errors.map(e => ({ campo: e.path, mensagem: e.message }))
+        erros: Object.values(error.errors).map(e => ({ campo: e.path, mensagem: e.message }))
+      });
+    }
+
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        error: true,
+        message: `${campo} já cadastrado`
       });
     }
 
@@ -203,7 +204,7 @@ export const atualizarMedico = async (req, res) => {
     const { nome, cpf, crm, data_nascimento, plano, senha, role, ativo } = req.body;
 
     // Buscar médico
-    const medico = await Medico.findByPk(id);
+    const medico = await Medico.findById(id);
 
     if (!medico) {
       return res.status(404).json({
@@ -229,7 +230,7 @@ export const atualizarMedico = async (req, res) => {
     if (nome) dadosAtualizacao.nome = nome;
     if (cpf && cpf !== medico.cpf) {
       // Verificar se novo CPF já existe
-      const cpfExiste = await Medico.findOne({ where: { cpf } });
+      const cpfExiste = await Medico.findOne({ cpf, _id: { $ne: id } });
       if (cpfExiste) {
         return res.status(400).json({
           error: true,
@@ -240,7 +241,7 @@ export const atualizarMedico = async (req, res) => {
     }
     if (crm && crm !== medico.crm) {
       // Verificar se novo CRM já existe
-      const crmExiste = await Medico.findOne({ where: { crm } });
+      const crmExiste = await Medico.findOne({ crm, _id: { $ne: id } });
       if (crmExiste) {
         return res.status(400).json({
           error: true,
@@ -267,7 +268,8 @@ export const atualizarMedico = async (req, res) => {
     }
 
     // Atualizar médico
-    await medico.update(dadosAtualizacao);
+    Object.assign(medico, dadosAtualizacao);
+    await medico.save();
 
     // Registrar no log de auditoria
     await AuditLog.registrar({
@@ -275,7 +277,7 @@ export const atualizarMedico = async (req, res) => {
       usuario_nome: req.usuario.nome,
       acao: 'UPDATE',
       entidade: 'Medico',
-      entidade_id: medico.id,
+      entidade_id: medico._id,
       dados_anteriores: dadosAnteriores,
       dados_novos: dadosAtualizacao,
       ip_address: req.ip,
@@ -283,24 +285,27 @@ export const atualizarMedico = async (req, res) => {
       status: 'sucesso'
     });
 
-    // Retornar médico atualizado (sem senha)
-    const medicoAtualizado = await Medico.findByPk(id, {
-      attributes: { exclude: ['senha'] }
-    });
-
     return res.status(200).json({
       success: true,
       message: 'Médico atualizado com sucesso',
-      data: medicoAtualizado
+      data: medico
     });
   } catch (error) {
     console.error('Erro ao atualizar médico:', error);
 
-    if (error.name === 'SequelizeValidationError') {
+    if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: true,
         message: 'Erro de validação',
-        erros: error.errors.map(e => ({ campo: e.path, mensagem: e.message }))
+        erros: Object.values(error.errors).map(e => ({ campo: e.path, mensagem: e.message }))
+      });
+    }
+
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        error: true,
+        message: `${campo} já cadastrado`
       });
     }
 
@@ -320,7 +325,7 @@ export const deletarMedico = async (req, res) => {
     const { id } = req.params;
 
     // Buscar médico
-    const medico = await Medico.findByPk(id);
+    const medico = await Medico.findById(id);
 
     if (!medico) {
       return res.status(404).json({
@@ -330,7 +335,7 @@ export const deletarMedico = async (req, res) => {
     }
 
     // Prevenir auto-exclusão
-    if (medico.id === req.usuario.id) {
+    if (medico._id === req.usuario.id) {
       return res.status(400).json({
         error: true,
         message: 'Você não pode deletar sua própria conta'
@@ -347,7 +352,7 @@ export const deletarMedico = async (req, res) => {
     };
 
     // Deletar médico
-    await medico.destroy();
+    await medico.deleteOne();
 
     // Registrar no log de auditoria
     await AuditLog.registrar({

@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { testConnection, syncDatabase } from './config/database.js';
 import { connectMongoDB } from './config/mongodb.js';
 
 // Carregar variáveis de ambiente
@@ -26,11 +25,6 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// Importar modelos (necessário para criar as tabelas)
-import './models/Medico.js';
-import './models/Paciente.js';
-import './models/Consulta.js';
 
 // Importar rotas
 import authRoutes from './routes/auth.routes.js';
@@ -61,19 +55,10 @@ app.use((req, res) => {
   });
 });
 
-// Função para inicializar o servidor e conectar aos bancos de dados
+// Função para inicializar o servidor e conectar ao MongoDB
 const startServer = async () => {
   try {
-    console.log('🔄 Iniciando conexões com os bancos de dados...\n');
-
-    // Conectar ao PostgreSQL
-    const postgresConnected = await testConnection();
-    if (!postgresConnected) {
-      throw new Error('Falha ao conectar ao PostgreSQL');
-    }
-
-    // Sincronizar modelos com o banco (criar tabelas se não existirem)
-    await syncDatabase(false, false);
+    console.log('🔄 Iniciando conexão com MongoDB...\n');
 
     // Conectar ao MongoDB
     const mongoConnected = await connectMongoDB();

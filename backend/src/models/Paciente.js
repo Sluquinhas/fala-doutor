@@ -1,125 +1,82 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
+import { randomUUID } from 'crypto';
 
-/**
- * Modelo de Paciente
- * Representa os pacientes que podem se cadastrar publicamente ou ser gerenciados por médicos
- */
-const Paciente = sequelize.define('paciente', {
-  id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    primaryKey: true,
-    comment: 'ID único do paciente'
+const PLANOS = ['nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'];
+
+const pacienteSchema = new mongoose.Schema({
+  _id: {
+    type: String,
+    default: () => randomUUID()
   },
   nome: {
-    type: DataTypes.STRING(150),
-    allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Nome é obrigatório'
-      },
-      len: {
-        args: [3, 150],
-        msg: 'Nome deve ter entre 3 e 150 caracteres'
-      }
-    },
-    comment: 'Nome completo do paciente'
+    type: String,
+    required: [true, 'Nome é obrigatório'],
+    trim: true,
+    minlength: [3, 'Nome deve ter entre 3 e 150 caracteres'],
+    maxlength: [150, 'Nome deve ter entre 3 e 150 caracteres']
   },
   cpf: {
-    type: DataTypes.STRING(11),
-    allowNull: false,
-    unique: {
-      msg: 'Este CPF já está cadastrado'
-    },
-    validate: {
-      notEmpty: {
-        msg: 'CPF é obrigatório'
-      },
-      is: {
-        args: /^[0-9]{11}$/,
-        msg: 'CPF deve conter exatamente 11 dígitos numéricos'
-      }
-    },
-    comment: 'CPF do paciente (apenas números)'
+    type: String,
+    required: [true, 'CPF é obrigatório'],
+    match: [/^[0-9]{11}$/, 'CPF deve conter exatamente 11 dígitos numéricos']
   },
   senha: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    comment: 'Senha hash do paciente para login (opcional no cadastro público)'
+    type: String,
+    default: null
   },
   data_nascimento: {
-    type: DataTypes.DATEONLY,
-    allowNull: false,
+    type: String,
+    required: [true, 'Data de nascimento é obrigatória'],
     validate: {
-      notEmpty: {
-        msg: 'Data de nascimento é obrigatória'
-      },
-      isDate: {
-        msg: 'Data de nascimento inválida'
-      },
-      isBefore: {
-        args: new Date().toISOString().split('T')[0],
-        msg: 'Data de nascimento deve ser anterior à data atual'
-      }
-    },
-    comment: 'Data de nascimento do paciente'
+      validator(v) { return new Date(v) < new Date(); },
+      message: 'Data de nascimento deve ser anterior à data atual'
+    }
   },
   plano: {
-    type: DataTypes.ENUM('nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'),
-    allowNull: false,
-    defaultValue: 'nenhum',
-    comment: 'Plano de saúde do paciente'
+    type: String,
+    enum: { values: PLANOS, message: 'Plano de saúde inválido' },
+    default: 'nenhum'
   },
   analise: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    comment: 'Análise médica ou observações sobre o paciente'
+    type: String,
+    default: null
   },
   status: {
-    type: DataTypes.ENUM('ativo', 'inativo', 'em_tratamento', 'alta'),
-    allowNull: false,
-    defaultValue: 'ativo',
-    comment: 'Status atual do paciente'
+    type: String,
+    enum: { values: ['ativo', 'inativo', 'em_tratamento', 'alta'], message: 'Status inválido' },
+    default: 'ativo'
   },
   email: {
-    type: DataTypes.STRING(150),
-    allowNull: true,
-    validate: {
-      isEmail: {
-        msg: 'Email inválido'
-      }
-    },
-    comment: 'Email do paciente para contato'
+    type: String,
+    default: null,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Email inválido']
   },
   telefone: {
-    type: DataTypes.STRING(15),
-    allowNull: true,
+    type: String,
+    default: null,
     validate: {
-      isValidPhone(value) {
-        if (value && value.length > 0) {
-          if (!/^[0-9]{10,15}$/.test(value)) {
-            throw new Error('Telefone deve conter entre 10 e 15 dígitos numéricos');
-          }
-        }
-      }
-    },
-    comment: 'Telefone do paciente (apenas números)'
+      validator(v) {
+        if (!v) return true;
+        return /^[0-9]{10,15}$/.test(v);
+      },
+      message: 'Telefone deve conter entre 10 e 15 dígitos numéricos'
+    }
   }
 }, {
-  tableName: 'pacientes',
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  indexes: [
-    {
-      unique: true,
-      fields: ['cpf']
-    },
-    {
-      fields: ['status']
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  toJSON: {
+    virtuals: true,
+    transform(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      delete ret.senha;
     }
-  ]
+  }
 });
 
+pacienteSchema.index({ cpf: 1 }, { unique: true });
+pacienteSchema.index({ status: 1 });
+
+const Paciente = mongoose.model('Paciente', pacienteSchema);
 export default Paciente;

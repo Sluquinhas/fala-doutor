@@ -36,7 +36,7 @@ const Dashboard = () => {
 
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Card de Médicos */}
           <div className="card cursor-pointer hover:shadow-lg transition-shadow"
                onClick={() => navigate('/medicos')}>
@@ -76,6 +76,27 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+
+          {/* Card de Relatórios */}
+          <div className="card cursor-pointer hover:shadow-lg transition-shadow"
+               onClick={() => navigate('/relatorios')}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                  Relatórios
+                </h2>
+                <p className="text-gray-600 text-sm">
+                  Ver listagens de pacientes e médicos
+                </p>
+              </div>
+              <div className="bg-purple-100 p-4 rounded-full">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         {/* Informações do Usuário */}

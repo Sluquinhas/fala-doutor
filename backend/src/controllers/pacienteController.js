@@ -1,5 +1,4 @@
-import { Op } from 'sequelize';
-import { Paciente } from '../models/index.js';
+import Paciente from '../models/Paciente.js';
 import AuditLog from '../models/AuditLog.js';
 import { hashSenha } from '../utils/hashUtils.js';
 
@@ -17,7 +16,7 @@ export const cadastroPublico = async (req, res) => {
     const { nome, cpf, data_nascimento, email, telefone, senha } = req.body;
 
     // Verificar se CPF já existe
-    const cpfExiste = await Paciente.findOne({ where: { cpf } });
+    const cpfExiste = await Paciente.findOne({ cpf });
     if (cpfExiste) {
       return res.status(400).json({
         error: true,
@@ -49,7 +48,7 @@ export const cadastroPublico = async (req, res) => {
       usuario_nome: 'Cadastro Público',
       acao: 'CREATE',
       entidade: 'Paciente',
-      entidade_id: novoPaciente.id,
+      entidade_id: novoPaciente._id,
       dados_novos: {
         nome: novoPaciente.nome,
         cpf: novoPaciente.cpf,
@@ -64,7 +63,7 @@ export const cadastroPublico = async (req, res) => {
       success: true,
       message: 'Cadastro realizado com sucesso! Um médico entrará em contato em breve.',
       data: {
-        id: novoPaciente.id,
+        id: novoPaciente._id,
         nome: novoPaciente.nome,
         cpf: novoPaciente.cpf,
         status: novoPaciente.status
@@ -73,11 +72,19 @@ export const cadastroPublico = async (req, res) => {
   } catch (error) {
     console.error('Erro no cadastro público:', error);
 
-    if (error.name === 'SequelizeValidationError') {
+    if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: true,
         message: 'Erro de validação',
-        erros: error.errors.map(e => ({ campo: e.path, mensagem: e.message }))
+        erros: Object.values(error.errors).map(e => ({ campo: e.path, mensagem: e.message }))
+      });
+    }
+
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        error: true,
+        message: `${campo} já cadastrado`
       });
     }
 
@@ -97,33 +104,34 @@ export const listarPacientes = async (req, res) => {
     const { page = 1, limit = 10, status, plano, search } = req.query;
 
     // Construir filtros
-    const where = {};
+    const filter = {};
 
     if (status) {
-      where.status = status;
+      filter.status = status;
     }
 
     if (plano) {
-      where.plano = plano;
+      filter.plano = plano;
     }
 
     if (search) {
-      where[Op.or] = [
-        { nome: { [Op.iLike]: `%${search}%` } },
-        { cpf: { [Op.like]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } }
+      filter.$or = [
+        { nome: { $regex: search, $options: 'i' } },
+        { cpf: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
       ];
     }
 
     // Paginação
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-    const { count, rows: pacientes } = await Paciente.findAndCountAll({
-      where,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['created_at', 'DESC']]
-    });
+    const [count, pacientes] = await Promise.all([
+      Paciente.countDocuments(filter),
+      Paciente.find(filter)
+        .sort({ created_at: -1 })
+        .limit(parseInt(limit))
+        .skip(parseInt(skip))
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -152,7 +160,7 @@ export const buscarPacientePorId = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const paciente = await Paciente.findByPk(id);
+    const paciente = await Paciente.findById(id);
 
     if (!paciente) {
       return res.status(404).json({
@@ -167,7 +175,7 @@ export const buscarPacientePorId = async (req, res) => {
       usuario_nome: req.usuario.nome,
       acao: 'READ',
       entidade: 'Paciente',
-      entidade_id: paciente.id,
+      entidade_id: paciente._id,
       ip_address: req.ip,
       user_agent: req.headers['user-agent'],
       status: 'sucesso'
@@ -195,7 +203,7 @@ export const criarPaciente = async (req, res) => {
     const { nome, cpf, data_nascimento, plano, analise, status, email, telefone } = req.body;
 
     // Verificar se CPF já existe
-    const cpfExiste = await Paciente.findOne({ where: { cpf } });
+    const cpfExiste = await Paciente.findOne({ cpf });
     if (cpfExiste) {
       return res.status(400).json({
         error: true,
@@ -221,7 +229,7 @@ export const criarPaciente = async (req, res) => {
       usuario_nome: req.usuario.nome,
       acao: 'CREATE',
       entidade: 'Paciente',
-      entidade_id: novoPaciente.id,
+      entidade_id: novoPaciente._id,
       dados_novos: {
         nome: novoPaciente.nome,
         cpf: novoPaciente.cpf,
@@ -241,11 +249,19 @@ export const criarPaciente = async (req, res) => {
   } catch (error) {
     console.error('Erro ao criar paciente:', error);
 
-    if (error.name === 'SequelizeValidationError') {
+    if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: true,
         message: 'Erro de validação',
-        erros: error.errors.map(e => ({ campo: e.path, mensagem: e.message }))
+        erros: Object.values(error.errors).map(e => ({ campo: e.path, mensagem: e.message }))
+      });
+    }
+
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        error: true,
+        message: `${campo} já cadastrado`
       });
     }
 
@@ -266,7 +282,7 @@ export const atualizarPaciente = async (req, res) => {
     const { nome, cpf, data_nascimento, plano, analise, status, email, telefone } = req.body;
 
     // Buscar paciente
-    const paciente = await Paciente.findByPk(id);
+    const paciente = await Paciente.findById(id);
 
     if (!paciente) {
       return res.status(404).json({
@@ -293,7 +309,7 @@ export const atualizarPaciente = async (req, res) => {
     if (nome) dadosAtualizacao.nome = nome;
     if (cpf && cpf !== paciente.cpf) {
       // Verificar se novo CPF já existe
-      const cpfExiste = await Paciente.findOne({ where: { cpf } });
+      const cpfExiste = await Paciente.findOne({ cpf, _id: { $ne: id } });
       if (cpfExiste) {
         return res.status(400).json({
           error: true,
@@ -310,7 +326,8 @@ export const atualizarPaciente = async (req, res) => {
     if (telefone !== undefined) dadosAtualizacao.telefone = telefone;
 
     // Atualizar paciente
-    await paciente.update(dadosAtualizacao);
+    Object.assign(paciente, dadosAtualizacao);
+    await paciente.save();
 
     // Registrar no log de auditoria
     await AuditLog.registrar({
@@ -318,7 +335,7 @@ export const atualizarPaciente = async (req, res) => {
       usuario_nome: req.usuario.nome,
       acao: 'UPDATE',
       entidade: 'Paciente',
-      entidade_id: paciente.id,
+      entidade_id: paciente._id,
       dados_anteriores: dadosAnteriores,
       dados_novos: dadosAtualizacao,
       ip_address: req.ip,
@@ -334,11 +351,19 @@ export const atualizarPaciente = async (req, res) => {
   } catch (error) {
     console.error('Erro ao atualizar paciente:', error);
 
-    if (error.name === 'SequelizeValidationError') {
+    if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: true,
         message: 'Erro de validação',
-        erros: error.errors.map(e => ({ campo: e.path, mensagem: e.message }))
+        erros: Object.values(error.errors).map(e => ({ campo: e.path, mensagem: e.message }))
+      });
+    }
+
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        error: true,
+        message: `${campo} já cadastrado`
       });
     }
 
@@ -358,7 +383,7 @@ export const deletarPaciente = async (req, res) => {
     const { id } = req.params;
 
     // Buscar paciente
-    const paciente = await Paciente.findByPk(id);
+    const paciente = await Paciente.findById(id);
 
     if (!paciente) {
       return res.status(404).json({
@@ -376,7 +401,7 @@ export const deletarPaciente = async (req, res) => {
     };
 
     // Deletar paciente
-    await paciente.destroy();
+    await paciente.deleteOne();
 
     // Registrar no log de auditoria
     await AuditLog.registrar({

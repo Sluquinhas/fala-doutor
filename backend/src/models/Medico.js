@@ -1,127 +1,71 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
+import { randomUUID } from 'crypto';
 
-/**
- * Modelo de Médico
- * Representa os profissionais médicos com acesso administrativo ao sistema
- */
-const Medico = sequelize.define('medico', {
-  id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    primaryKey: true,
-    comment: 'ID único do médico'
+const PLANOS = ['nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'];
+
+const medicoSchema = new mongoose.Schema({
+  _id: {
+    type: String,
+    default: () => randomUUID()
   },
   nome: {
-    type: DataTypes.STRING(150),
-    allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Nome é obrigatório'
-      },
-      len: {
-        args: [3, 150],
-        msg: 'Nome deve ter entre 3 e 150 caracteres'
-      }
-    },
-    comment: 'Nome completo do médico'
+    type: String,
+    required: [true, 'Nome é obrigatório'],
+    trim: true,
+    minlength: [3, 'Nome deve ter entre 3 e 150 caracteres'],
+    maxlength: [150, 'Nome deve ter entre 3 e 150 caracteres']
   },
   cpf: {
-    type: DataTypes.STRING(11),
-    allowNull: false,
-    unique: {
-      msg: 'Este CPF já está cadastrado'
-    },
-    validate: {
-      notEmpty: {
-        msg: 'CPF é obrigatório'
-      },
-      is: {
-        args: /^[0-9]{11}$/,
-        msg: 'CPF deve conter exatamente 11 dígitos numéricos'
-      }
-    },
-    comment: 'CPF do médico (apenas números)'
+    type: String,
+    required: [true, 'CPF é obrigatório'],
+    match: [/^[0-9]{11}$/, 'CPF deve conter exatamente 11 dígitos numéricos']
   },
   crm: {
-    type: DataTypes.STRING(20),
-    allowNull: false,
-    unique: {
-      msg: 'Este CRM já está cadastrado'
-    },
-    validate: {
-      notEmpty: {
-        msg: 'CRM é obrigatório'
-      }
-    },
-    comment: 'Número do CRM (Conselho Regional de Medicina)'
+    type: String,
+    required: [true, 'CRM é obrigatório'],
+    trim: true
   },
   data_nascimento: {
-    type: DataTypes.DATEONLY,
-    allowNull: false,
+    type: String,
+    required: [true, 'Data de nascimento é obrigatória'],
     validate: {
-      notEmpty: {
-        msg: 'Data de nascimento é obrigatória'
-      },
-      isDate: {
-        msg: 'Data de nascimento inválida'
-      },
-      isBefore: {
-        args: new Date().toISOString().split('T')[0],
-        msg: 'Data de nascimento deve ser anterior à data atual'
-      }
-    },
-    comment: 'Data de nascimento do médico'
+      validator(v) { return new Date(v) < new Date(); },
+      message: 'Data de nascimento deve ser anterior à data atual'
+    }
   },
   plano: {
-    type: DataTypes.ENUM('nenhum', 'unimed', 'amil', 'bradesco', 'sulamerica', 'hapvida', 'notredame', 'prevent'),
-    allowNull: false,
-    defaultValue: 'nenhum',
-    comment: 'Plano de assinatura do médico'
+    type: String,
+    enum: { values: PLANOS, message: 'Plano de saúde inválido' },
+    default: 'nenhum'
   },
   senha: {
-    type: DataTypes.STRING(255),
-    allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Senha é obrigatória'
-      }
-    },
-    comment: 'Senha hash (bcrypt)'
+    type: String,
+    required: [true, 'Senha é obrigatória']
   },
   role: {
-    type: DataTypes.STRING(20),
-    allowNull: false,
-    defaultValue: 'medico',
-    validate: {
-      isIn: {
-        args: [['medico', 'admin']],
-        msg: 'Role deve ser "medico" ou "admin"'
-      }
-    },
-    comment: 'Função do usuário no sistema'
+    type: String,
+    enum: { values: ['medico', 'admin'], message: 'Role deve ser "medico" ou "admin"' },
+    default: 'medico'
   },
   ativo: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: true,
-    comment: 'Indica se o médico está ativo no sistema'
+    type: Boolean,
+    default: true
   }
 }, {
-  tableName: 'medicos',
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  indexes: [
-    {
-      unique: true,
-      fields: ['cpf']
-    },
-    {
-      unique: true,
-      fields: ['crm']
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  toJSON: {
+    virtuals: true,
+    transform(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      delete ret.senha;
     }
-  ]
+  }
 });
 
+medicoSchema.index({ cpf: 1 }, { unique: true });
+medicoSchema.index({ crm: 1 }, { unique: true });
+
+const Medico = mongoose.model('Medico', medicoSchema);
 export default Medico;

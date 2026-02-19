@@ -1,5 +1,5 @@
 import { verificarToken, extrairToken } from '../utils/jwtUtils.js';
-import { Medico } from '../models/index.js';
+import Medico from '../models/Medico.js';
 import Paciente from '../models/Paciente.js';
 
 /**
@@ -9,11 +9,8 @@ import Paciente from '../models/Paciente.js';
  */
 export const autenticar = async (req, res, next) => {
   try {
-    console.log('🔐 Requisição recebida:', req.method, req.originalUrl);
-
     // Extrair token do header Authorization
     const authHeader = req.headers.authorization;
-    console.log('🔐 Auth header:', authHeader ? 'presente' : 'ausente');
 
     const token = extrairToken(authHeader);
 
@@ -26,16 +23,14 @@ export const autenticar = async (req, res, next) => {
 
     // Verificar e decodificar token
     const decoded = verificarToken(token);
-    console.log('🔐 Token decodificado:', decoded);
 
     let usuario = null;
     // Usar 'tipo' se existir, senão verificar 'role' para determinar o tipo
     let tipoUsuario = decoded.tipo || (decoded.role === 'paciente' ? 'paciente' : 'medico');
-    console.log('🔐 Tipo de usuário:', tipoUsuario);
 
     // Buscar usuário baseado no tipo
     if (tipoUsuario === 'paciente') {
-      usuario = await Paciente.findByPk(decoded.id);
+      usuario = await Paciente.findById(decoded.id);
 
       if (!usuario) {
         return res.status(401).json({
@@ -53,7 +48,7 @@ export const autenticar = async (req, res, next) => {
 
       // Adicionar informações do paciente à requisição
       req.usuario = {
-        id: usuario.id,
+        id: usuario._id,
         nome: usuario.nome,
         cpf: usuario.cpf,
         role: 'paciente',
@@ -62,7 +57,7 @@ export const autenticar = async (req, res, next) => {
       };
     } else {
       // Buscar médico no banco para garantir que ainda existe e está ativo
-      usuario = await Medico.findByPk(decoded.id);
+      usuario = await Medico.findById(decoded.id);
 
       if (!usuario) {
         return res.status(401).json({
@@ -80,7 +75,7 @@ export const autenticar = async (req, res, next) => {
 
       // Adicionar informações do médico à requisição
       req.usuario = {
-        id: usuario.id,
+        id: usuario._id,
         nome: usuario.nome,
         cpf: usuario.cpf,
         role: usuario.role,
@@ -133,11 +128,11 @@ export const autenticarOpcional = async (req, res, next) => {
     const tipoUsuario = decoded.tipo || (decoded.role === 'paciente' ? 'paciente' : 'medico');
 
     if (tipoUsuario === 'paciente') {
-      const paciente = await Paciente.findByPk(decoded.id);
+      const paciente = await Paciente.findById(decoded.id);
 
       if (paciente && paciente.status === 'ativo') {
         req.usuario = {
-          id: paciente.id,
+          id: paciente._id,
           nome: paciente.nome,
           cpf: paciente.cpf,
           role: 'paciente',
@@ -146,11 +141,11 @@ export const autenticarOpcional = async (req, res, next) => {
         };
       }
     } else {
-      const medico = await Medico.findByPk(decoded.id);
+      const medico = await Medico.findById(decoded.id);
 
       if (medico && medico.ativo) {
         req.usuario = {
-          id: medico.id,
+          id: medico._id,
           nome: medico.nome,
           cpf: medico.cpf,
           role: medico.role,

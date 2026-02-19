@@ -9,6 +9,9 @@ import CadastroPublico from './pages/CadastroPublico';
 import CadastroMedico from './pages/CadastroMedico';
 import PacienteDashboard from './pages/PacienteDashboard';
 import AgendarConsulta from './pages/AgendarConsulta';
+import Relatorios from './pages/Relatorios';
+import Grafico from './pages/Grafico';
+import PacienteRelatorios from './pages/PacienteRelatorios';
 
 function App() {
   return (
@@ -51,6 +54,23 @@ function App() {
             }
           />
 
+          <Route
+            path="/relatorios"
+            element={
+              <ProtectedRoute>
+                <Relatorios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/grafico'
+            element={
+              <ProtectedRoute>
+                <Grafico />
+              </ProtectedRoute>
+            }
+            />
+
           {/* Rotas do Paciente */}
           <Route
             path="/paciente/dashboard"
@@ -66,6 +86,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <AgendarConsulta />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/paciente/relatorios"
+            element={
+              <ProtectedRoute>
+                <PacienteRelatorios />
               </ProtectedRoute>
             }
           />

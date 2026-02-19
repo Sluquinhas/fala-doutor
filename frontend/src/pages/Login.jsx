@@ -69,7 +69,7 @@ const Login = () => {
           </div>
 
           {/* Formulário */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
             {/* Mensagem de erro */}
             {erro && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -86,6 +86,7 @@ const Login = () => {
                 id="cpf"
                 type="text"
                 maxLength="14"
+                autoComplete="new-password"
                 className={`input-field ${errors.cpf ? 'input-error' : ''}`}
                 placeholder="000.000.000-00"
                 {...register('cpf', {
@@ -112,6 +113,7 @@ const Login = () => {
               <input
                 id="senha"
                 type="password"
+                autoComplete="new-password"
                 className={`input-field ${errors.senha ? 'input-error' : ''}`}
                 placeholder="Sua senha"
                 {...register('senha', {

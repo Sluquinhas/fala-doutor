@@ -5,10 +5,10 @@ dotenv.config();
 
 /**
  * Configuração e conexão com MongoDB usando Mongoose
- * Responsável por armazenar logs de auditoria e histórico de alterações
+ * Banco de dados principal do sistema Fala Doutor
  */
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/fala_doutor_logs';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/fala_doutor';
 
 // Configurações de conexão
 const mongoOptions = {

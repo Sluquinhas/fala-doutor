@@ -1,21 +1,18 @@
 import Medico from './Medico.js';
 import Paciente from './Paciente.js';
-
-/**
- * Exportação centralizada de todos os modelos
- * Facilita a importação em outros módulos
- */
-
-// Define relacionamentos entre modelos (se necessário)
-// Exemplo: Medico.hasMany(Paciente, { foreignKey: 'medico_id' });
-// Paciente.belongsTo(Medico, { foreignKey: 'medico_id' });
+import Consulta from './Consulta.js';
+import AuditLog from './AuditLog.js';
 
 export {
   Medico,
-  Paciente
+  Paciente,
+  Consulta,
+  AuditLog
 };
 
 export default {
   Medico,
-  Paciente
+  Paciente,
+  Consulta,
+  AuditLog
 };

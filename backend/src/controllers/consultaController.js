@@ -1,4 +1,3 @@
-import { Op } from 'sequelize';
 import Consulta from '../models/Consulta.js';
 import Medico from '../models/Medico.js';
 import Paciente from '../models/Paciente.js';
@@ -10,34 +9,20 @@ import AuditLog from '../models/AuditLog.js';
 export const listarConsultas = async (req, res) => {
   try {
     const { medico_id, paciente_id, status, data_inicio, data_fim } = req.query;
-    const where = {};
+    const filter = {};
 
-    if (medico_id) where.medico_id = medico_id;
-    if (paciente_id) where.paciente_id = paciente_id;
-    if (status) where.status = status;
+    if (medico_id) filter.medico_id = medico_id;
+    if (paciente_id) filter.paciente_id = paciente_id;
+    if (status) filter.status = status;
 
     if (data_inicio && data_fim) {
-      where.data_consulta = {
-        [Op.between]: [data_inicio, data_fim]
-      };
+      filter.data_consulta = { $gte: data_inicio, $lte: data_fim };
     }
 
-    const consultas = await Consulta.findAll({
-      where,
-      include: [
-        {
-          model: Medico,
-          as: 'medico',
-          attributes: ['id', 'nome', 'crm', 'plano']
-        },
-        {
-          model: Paciente,
-          as: 'paciente',
-          attributes: ['id', 'nome', 'cpf', 'email', 'telefone']
-        }
-      ],
-      order: [['data_consulta', 'ASC'], ['hora_consulta', 'ASC']]
-    });
+    const consultas = await Consulta.find(filter)
+      .populate({ path: 'medico', select: 'nome crm plano' })
+      .populate({ path: 'paciente', select: 'nome cpf email telefone' })
+      .sort({ data_consulta: 1, hora_consulta: 1 });
 
     res.json({
       total: consultas.length,
@@ -58,20 +43,10 @@ export const listarConsultas = async (req, res) => {
 export const listarConsultasPaciente = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('🔍 Buscando consultas do paciente:', id);
-    console.log('🔍 Usuário autenticado:', req.usuario);
 
-    const consultas = await Consulta.findAll({
-      where: { paciente_id: id },
-      include: [
-        {
-          model: Medico,
-          as: 'medico',
-          attributes: ['id', 'nome', 'crm', 'plano']
-        }
-      ],
-      order: [['data_consulta', 'DESC'], ['hora_consulta', 'DESC']]
-    });
+    const consultas = await Consulta.find({ paciente_id: id })
+      .populate({ path: 'medico', select: 'nome crm plano' })
+      .sort({ data_consulta: -1, hora_consulta: -1 });
 
     res.json({
       total: consultas.length,
@@ -93,17 +68,9 @@ export const listarConsultasMedico = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const consultas = await Consulta.findAll({
-      where: { medico_id: id },
-      include: [
-        {
-          model: Paciente,
-          as: 'paciente',
-          attributes: ['id', 'nome', 'cpf', 'email', 'telefone']
-        }
-      ],
-      order: [['data_consulta', 'ASC'], ['hora_consulta', 'ASC']]
-    });
+    const consultas = await Consulta.find({ medico_id: id })
+      .populate({ path: 'paciente', select: 'nome cpf email telefone' })
+      .sort({ data_consulta: 1, hora_consulta: 1 });
 
     res.json({
       total: consultas.length,
@@ -125,20 +92,9 @@ export const buscarConsultaPorId = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const consulta = await Consulta.findByPk(id, {
-      include: [
-        {
-          model: Medico,
-          as: 'medico',
-          attributes: ['id', 'nome', 'crm', 'plano']
-        },
-        {
-          model: Paciente,
-          as: 'paciente',
-          attributes: ['id', 'nome', 'cpf', 'email', 'telefone']
-        }
-      ]
-    });
+    const consulta = await Consulta.findById(id)
+      .populate({ path: 'medico', select: 'nome crm plano' })
+      .populate({ path: 'paciente', select: 'nome cpf email telefone' });
 
     if (!consulta) {
       return res.status(404).json({
@@ -165,7 +121,7 @@ export const criarConsulta = async (req, res) => {
     const { medico_id, paciente_id, data_consulta, hora_consulta, observacoes } = req.body;
 
     // Verificar se médico existe
-    const medico = await Medico.findByPk(medico_id);
+    const medico = await Medico.findById(medico_id);
     if (!medico) {
       return res.status(404).json({
         error: true,
@@ -174,7 +130,7 @@ export const criarConsulta = async (req, res) => {
     }
 
     // Verificar se paciente existe
-    const paciente = await Paciente.findByPk(paciente_id);
+    const paciente = await Paciente.findById(paciente_id);
     if (!paciente) {
       return res.status(404).json({
         error: true,
@@ -184,12 +140,10 @@ export const criarConsulta = async (req, res) => {
 
     // Verificar se já existe consulta neste horário para o médico
     const consultaExistente = await Consulta.findOne({
-      where: {
-        medico_id,
-        data_consulta,
-        hora_consulta,
-        status: ['agendada', 'confirmada']
-      }
+      medico_id,
+      data_consulta,
+      hora_consulta,
+      status: { $in: ['agendada', 'confirmada'] }
     });
 
     if (consultaExistente) {
@@ -210,31 +164,22 @@ export const criarConsulta = async (req, res) => {
     });
 
     // Registrar auditoria
-    await AuditLog.create({
-      usuario_id: req.user?.id,
-      usuario_nome: req.user?.nome || paciente.nome,
+    await AuditLog.registrar({
+      usuario_id: req.usuario?.id,
+      usuario_nome: req.usuario?.nome || paciente.nome,
       acao: 'CREATE',
       entidade: 'Consulta',
+      entidade_id: consulta._id,
       dados_novos: consulta.toJSON(),
       ip_address: req.ip,
-      user_agent: req.get('user-agent')
+      user_agent: req.get('user-agent'),
+      status: 'sucesso'
     });
 
     // Buscar consulta completa com relações
-    const consultaCriada = await Consulta.findByPk(consulta.id, {
-      include: [
-        {
-          model: Medico,
-          as: 'medico',
-          attributes: ['id', 'nome', 'crm']
-        },
-        {
-          model: Paciente,
-          as: 'paciente',
-          attributes: ['id', 'nome', 'cpf']
-        }
-      ]
-    });
+    const consultaCriada = await Consulta.findById(consulta._id)
+      .populate({ path: 'medico', select: 'nome crm' })
+      .populate({ path: 'paciente', select: 'nome cpf' });
 
     res.status(201).json({
       message: 'Consulta agendada com sucesso',
@@ -257,7 +202,7 @@ export const atualizarConsulta = async (req, res) => {
     const { id } = req.params;
     const { data_consulta, hora_consulta, status, observacoes, motivo_cancelamento } = req.body;
 
-    const consulta = await Consulta.findByPk(id);
+    const consulta = await Consulta.findById(id);
 
     if (!consulta) {
       return res.status(404).json({
@@ -269,41 +214,31 @@ export const atualizarConsulta = async (req, res) => {
     const dadosAnteriores = consulta.toJSON();
 
     // Atualizar consulta
-    await consulta.update({
-      data_consulta: data_consulta || consulta.data_consulta,
-      hora_consulta: hora_consulta || consulta.hora_consulta,
-      status: status || consulta.status,
-      observacoes: observacoes !== undefined ? observacoes : consulta.observacoes,
-      motivo_cancelamento: motivo_cancelamento || consulta.motivo_cancelamento
-    });
+    if (data_consulta) consulta.data_consulta = data_consulta;
+    if (hora_consulta) consulta.hora_consulta = hora_consulta;
+    if (status) consulta.status = status;
+    if (observacoes !== undefined) consulta.observacoes = observacoes;
+    if (motivo_cancelamento) consulta.motivo_cancelamento = motivo_cancelamento;
+    await consulta.save();
 
     // Registrar auditoria
-    await AuditLog.create({
-      usuario_id: req.user?.id,
-      usuario_nome: req.user?.nome,
+    await AuditLog.registrar({
+      usuario_id: req.usuario?.id,
+      usuario_nome: req.usuario?.nome,
       acao: 'UPDATE',
       entidade: 'Consulta',
+      entidade_id: consulta._id,
       dados_anteriores: dadosAnteriores,
       dados_novos: consulta.toJSON(),
       ip_address: req.ip,
-      user_agent: req.get('user-agent')
+      user_agent: req.get('user-agent'),
+      status: 'sucesso'
     });
 
     // Buscar consulta atualizada com relações
-    const consultaAtualizada = await Consulta.findByPk(id, {
-      include: [
-        {
-          model: Medico,
-          as: 'medico',
-          attributes: ['id', 'nome', 'crm']
-        },
-        {
-          model: Paciente,
-          as: 'paciente',
-          attributes: ['id', 'nome', 'cpf']
-        }
-      ]
-    });
+    const consultaAtualizada = await Consulta.findById(id)
+      .populate({ path: 'medico', select: 'nome crm' })
+      .populate({ path: 'paciente', select: 'nome cpf' });
 
     res.json({
       message: 'Consulta atualizada com sucesso',
@@ -326,7 +261,7 @@ export const cancelarConsulta = async (req, res) => {
     const { id } = req.params;
     const { motivo_cancelamento } = req.body;
 
-    const consulta = await Consulta.findByPk(id);
+    const consulta = await Consulta.findById(id);
 
     if (!consulta) {
       return res.status(404).json({
@@ -344,21 +279,22 @@ export const cancelarConsulta = async (req, res) => {
 
     const dadosAnteriores = consulta.toJSON();
 
-    await consulta.update({
-      status: 'cancelada',
-      motivo_cancelamento
-    });
+    consulta.status = 'cancelada';
+    consulta.motivo_cancelamento = motivo_cancelamento;
+    await consulta.save();
 
     // Registrar auditoria
-    await AuditLog.create({
+    await AuditLog.registrar({
       usuario_id: req.usuario?.id,
       usuario_nome: req.usuario?.nome || 'Usuário',
       acao: 'UPDATE',
       entidade: 'Consulta',
+      entidade_id: consulta._id,
       dados_anteriores: dadosAnteriores,
       dados_novos: consulta.toJSON(),
       ip_address: req.ip,
-      user_agent: req.get('user-agent')
+      user_agent: req.get('user-agent'),
+      status: 'sucesso'
     });
 
     res.json({
@@ -381,7 +317,7 @@ export const deletarConsulta = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const consulta = await Consulta.findByPk(id);
+    const consulta = await Consulta.findById(id);
 
     if (!consulta) {
       return res.status(404).json({
@@ -392,17 +328,19 @@ export const deletarConsulta = async (req, res) => {
 
     const dadosAnteriores = consulta.toJSON();
 
-    await consulta.destroy();
+    await consulta.deleteOne();
 
     // Registrar auditoria
-    await AuditLog.create({
-      usuario_id: req.user?.id,
-      usuario_nome: req.user?.nome,
+    await AuditLog.registrar({
+      usuario_id: req.usuario?.id,
+      usuario_nome: req.usuario?.nome,
       acao: 'DELETE',
       entidade: 'Consulta',
+      entidade_id: id,
       dados_anteriores: dadosAnteriores,
       ip_address: req.ip,
-      user_agent: req.get('user-agent')
+      user_agent: req.get('user-agent'),
+      status: 'sucesso'
     });
 
     res.json({

@@ -132,5 +132,31 @@ export const pacienteService = {
     return response.data;
   }
 };
+/**
+ * Serviços de Consultas
+ */
+export const consultaService = {
+  listar: async (params = {}) => {
+    const response = await api.get('/consultas', { params});
+    return response.data;
+  },
+  buscarPorId: async (id) => {
+    const response = await api.get(`/consultas/${id}`);
+    return response.data;
+  },
+  criar: async (dados) => {
+    const response = await api.post('/consultas', dados);
+    return response.data;
+  },
+
+  atualizar: async (id, dados) => {
+    const response = await api.put(`/consultas/${id}`, dados);
+    return response.data;
+  },
+  deletar: async (id) => {
+    const response = await api.delete(`/consultas/${id}`);
+    return response.data;
+  },
+};
 
 export default api;

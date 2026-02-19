@@ -1,4 +1,4 @@
-import { Medico } from '../models/index.js';
+import Medico from '../models/Medico.js';
 import Paciente from '../models/Paciente.js';
 import { hashSenha, compararSenha, validarSenha } from '../utils/hashUtils.js';
 import { gerarToken } from '../utils/jwtUtils.js';
@@ -26,13 +26,13 @@ export const login = async (req, res) => {
     }
 
     // Buscar primeiro como médico
-    let usuario = await Medico.findOne({ where: { cpf } });
+    let usuario = await Medico.findOne({ cpf });
     let tipoUsuario = 'medico';
     let role = null;
 
     // Se não for médico, buscar como paciente
     if (!usuario) {
-      usuario = await Paciente.findOne({ where: { cpf } });
+      usuario = await Paciente.findOne({ cpf });
       tipoUsuario = 'paciente';
     }
 
@@ -86,7 +86,7 @@ export const login = async (req, res) => {
     if (!senhaCorreta) {
       // Registrar tentativa de login falhada
       await AuditLog.registrar({
-        usuario_id: usuario.id,
+        usuario_id: usuario._id,
         usuario_nome: usuario.nome,
         acao: 'LOGIN_FAILED',
         entidade: 'Auth',
@@ -111,7 +111,7 @@ export const login = async (req, res) => {
 
     // Gerar token JWT
     const token = gerarToken({
-      id: usuario.id,
+      id: usuario._id,
       nome: usuario.nome,
       role: role,
       tipo: tipoUsuario
@@ -119,7 +119,7 @@ export const login = async (req, res) => {
 
     // Registrar login bem-sucedido
     await AuditLog.registrar({
-      usuario_id: usuario.id,
+      usuario_id: usuario._id,
       usuario_nome: usuario.nome,
       acao: 'LOGIN',
       entidade: 'Auth',
@@ -131,7 +131,7 @@ export const login = async (req, res) => {
 
     // Preparar dados do usuário para retorno (sem a senha)
     const usuarioResposta = {
-      id: usuario.id,
+      id: usuario._id,
       nome: usuario.nome,
       cpf: usuario.cpf,
       plano: usuario.plano,
@@ -190,7 +190,7 @@ export const registro = async (req, res) => {
     }
 
     // Verificar se CPF já existe
-    const cpfExiste = await Medico.findOne({ where: { cpf } });
+    const cpfExiste = await Medico.findOne({ cpf });
     if (cpfExiste) {
       return res.status(400).json({
         error: true,
@@ -199,7 +199,7 @@ export const registro = async (req, res) => {
     }
 
     // Verificar se CRM já existe
-    const crmExiste = await Medico.findOne({ where: { crm } });
+    const crmExiste = await Medico.findOne({ crm });
     if (crmExiste) {
       return res.status(400).json({
         error: true,
@@ -224,11 +224,11 @@ export const registro = async (req, res) => {
 
     // Registrar criação no log de auditoria
     await AuditLog.registrar({
-      usuario_id: novoMedico.id,
+      usuario_id: novoMedico._id,
       usuario_nome: novoMedico.nome,
       acao: 'CREATE',
       entidade: 'Medico',
-      entidade_id: novoMedico.id,
+      entidade_id: novoMedico._id,
       dados_novos: {
         nome: novoMedico.nome,
         cpf: novoMedico.cpf,
@@ -243,9 +243,10 @@ export const registro = async (req, res) => {
 
     // Gerar token para login automático
     const token = gerarToken({
-      id: novoMedico.id,
+      id: novoMedico._id,
       nome: novoMedico.nome,
-      role: novoMedico.role
+      role: novoMedico.role,
+      tipo: 'medico'
     });
 
     return res.status(201).json({
@@ -253,7 +254,7 @@ export const registro = async (req, res) => {
       message: 'Médico cadastrado com sucesso',
       token,
       usuario: {
-        id: novoMedico.id,
+        id: novoMedico._id,
         nome: novoMedico.nome,
         cpf: novoMedico.cpf,
         crm: novoMedico.crm,
@@ -265,13 +266,22 @@ export const registro = async (req, res) => {
     console.error('Erro no registro:', error);
     console.error('Erro detalhes:', JSON.stringify(error, null, 2));
 
-    // Tratar erros de validação do Sequelize
-    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeDatabaseError') {
+    // Tratar erros de validação do Mongoose
+    if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: true,
         message: 'Erro de validação',
         detalhes: error.message,
-        erros: error.errors ? error.errors.map(e => ({ campo: e.path, mensagem: e.message })) : []
+        erros: Object.values(error.errors).map(e => ({ campo: e.path, mensagem: e.message }))
+      });
+    }
+
+    // Tratar erro de chave duplicada
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        error: true,
+        message: `${campo} já cadastrado`
       });
     }
 
@@ -294,13 +304,9 @@ export const me = async (req, res) => {
     let usuario = null;
 
     if (tipoUsuario === 'medico') {
-      usuario = await Medico.findByPk(req.usuario.id, {
-        attributes: { exclude: ['senha'] }
-      });
+      usuario = await Medico.findById(req.usuario.id);
     } else {
-      usuario = await Paciente.findByPk(req.usuario.id, {
-        attributes: { exclude: ['senha'] }
-      });
+      usuario = await Paciente.findById(req.usuario.id);
     }
 
     if (!usuario) {
@@ -312,7 +318,7 @@ export const me = async (req, res) => {
 
     // Preparar resposta baseada no tipo de usuário
     const usuarioResposta = {
-      id: usuario.id,
+      id: usuario._id,
       nome: usuario.nome,
       cpf: usuario.cpf,
       data_nascimento: usuario.data_nascimento,
